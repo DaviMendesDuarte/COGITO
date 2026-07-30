@@ -105,12 +105,12 @@ Projeto desenvolvido pelo **3º Desenvolvimento de Sistemas - Período Integral 
 
 | Integrante | Função |
 |------------|---------|
-| Ana Laura Garcia Pereira | Desenvolvedora |
-| Davi Mendes Duarte | Líder e Desenvolvedor |
-| Davi Ribeiro Miranda | Desenvolvedor |
-| Gustavo Luiz Machado | Desenvolvedor |
-| Guilherme Silva André | Desenvolvedor |
-| Izabela de Souza Santos | Vice-líder e Desenvolvedora |
+| Ana Laura Garcia Pereira | Monografia |
+| Davi Mendes Duarte | Líder e Programador |
+| Davi Ribeiro Miranda | Banco de Dados |
+| Gustavo Luiz Machado | Programador |
+| Guilherme Silva André | Monografia |
+| Izabela de Souza Santos | Vice-líder e Monografia |
 
 ---
 
