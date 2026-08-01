@@ -9,16 +9,16 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/DaviMendesDuarte/COGITO">
+  <!-- <a href="https://github.com/DaviMendesDuarte/COGITO">
     <img src="https://img.shields.io/badge/Status-Em%20Desenvolvimento-orange?style=for-the-badge" alt="Status">
-  </a>
+  </a> -->
   <a href="https://github.com/DaviMendesDuarte/COGITO/wiki">
     <img src="https://img.shields.io/badge/Wiki-Documentação-blue?style=for-the-badge" alt="Wiki">
   </a>
   <a href="https://www.figma.com/make/JvtDo3mRwR5MIsaS6lJoyb/COGITO---Prot%C3%B3tipo-3.0?t=7rEi5qH0DLXvcCs7-1&preview-route=%2Fdashboard">
-    <img src="https://img.shields.io/badge/Figma-Protótipo-purple?style=for-the-badge&logo=figma&logoColor=white" alt="Protótipo">
-  </a>
-  <img src="https://img.shields.io/badge/Licença-Acadêmica-green?style=for-the-badge" alt="Licença">
+    <img src="https://img.shields.io/badge/Figma-Protótipo-orange?style=for-the-badge&logo=figma&logoColor=white" alt="Protótipo">
+  <!-- </a>
+  <img src="https://img.shields.io/badge/Licença-Acadêmica-blue?style=for-the-badge" alt="Licença"> -->
 </p>
 
 ---
@@ -105,12 +105,12 @@ Projeto desenvolvido pelo **3º Desenvolvimento de Sistemas - Período Integral 
 
 | Integrante | Função |
 |------------|---------|
-| Ana Laura Garcia Pereira | Monografia |
-| Davi Mendes Duarte | Líder e Programador |
-| Davi Ribeiro Miranda | Banco de Dados |
-| Gustavo Luiz Machado | Programador |
-| Guilherme Silva André | Monografia |
-| Izabela de Souza Santos | Vice-líder e Monografia |
+| Davi Mendes Duarte | Líder do projeto e Desenvolvimento |
+| Gustavo Luiz Machado | Desenvolvimento |
+| Davi Ribeiro Miranda | Documentação e Banco de Dados |
+| Ana Laura Garcia Pereira | Documentação |
+| Guilherme Silva André | Documentação |
+| Izabela de Souza Santos | Vice-líder, Documentação e Gerenciamento do Projeto |
 
 ---
 
