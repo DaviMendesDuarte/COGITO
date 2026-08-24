@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="https://i.imgur.com/jP2QAr0.png" alt="COGITO Logo" ">
-</p>
+<img width="4000" height="1440" alt="github_thing" src="https://github.com/user-attachments/assets/69202e81-7672-4403-ad74-01165ff6928c" />
 
 ---
 
