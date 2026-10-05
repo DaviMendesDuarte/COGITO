@@ -1,0 +1,168 @@
+name: COGITO CD - Continuous Delivery & Distribution
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Tipo de artefato Android a ser gerado'
+        required: true
+        default: 'apk'
+        type: choice
+        options:
+          - apk
+          - bundle
+          - both
+      create_release:
+        description: 'Criar Release no GitHub com os artefatos'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  # ============================================================================
+  # 1. GERAÇÃO DE BUILDS ANDROID (APK E/OU APP BUNDLE)
+  # ============================================================================
+  build-android:
+    name: 🚀 Build & Empacotamento Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup do Java JDK (17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: 🐦 Setup do Flutter SDK (3.41.2)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.2'
+          channel: 'stable'
+          cache: true
+
+      - name: 🐘 Setup do Gradle & Cache de Dependências
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 📦 Instalar Dependências do Flutter
+        run: flutter pub get
+
+      - name: 🔑 Configurar Assinatura de Release (Keystore)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "🔐 Chave de assinatura encontrada no GitHub Secrets. Configurando keystore de produção..."
+            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+            cat <<EOF > android/key.properties
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=upload-keystore.jks
+          EOF
+            echo "Assinatura de produção configurada com sucesso."
+          else
+            echo "⚠️ AVISO: Segredo KEYSTORE_BASE64 não configurado no GitHub Secrets."
+            echo "O build de Release será assinado com a chave padrão de desenvolvimento/teste."
+          fi
+
+      - name: 🛠️ Compilar Android Release APK
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_type == 'apk' || inputs.build_type == 'both' }}
+        run: flutter build apk --release --android-skip-build-dependency-validation
+
+      - name: 📦 Compilar Android App Bundle (AAB)
+        if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (inputs.build_type == 'bundle' || inputs.build_type == 'both')) }}
+        run: flutter build appbundle --release --android-skip-build-dependency-validation
+
+      - name: 🔒 Gerar Checksums SHA-256 para Integridade
+        run: |
+          mkdir -p dist
+          if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-release.apk dist/cogito-release.apk
+          fi
+          if [ -f build/app/outputs/bundle/release/app-release.aab ]; then
+            cp build/app/outputs/bundle/release/app-release.aab dist/cogito-release.aab
+          fi
+          cd dist
+          sha256sum * > SHA256SUMS.txt || true
+          cat SHA256SUMS.txt
+
+      - name: 📤 Publicar APK como Artefato
+        if: ${{ hashFiles('dist/cogito-release.apk') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cogito-android-release-apk
+          path: dist/cogito-release.apk
+          retention-days: 14
+
+      - name: 📤 Publicar App Bundle como Artefato
+        if: ${{ hashFiles('dist/cogito-release.aab') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cogito-android-release-bundle
+          path: dist/cogito-release.aab
+          retention-days: 14
+
+      - name: 📤 Publicar Relatório de Integridade (Checksums)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cogito-build-checksums
+          path: dist/SHA256SUMS.txt
+          retention-days: 14
+
+  # ============================================================================
+  # 2. PUBLICAÇÃO DE RELEASE OFICIAL (TAGS OU DISPARO MANUAL)
+  # ============================================================================
+  publish-release:
+    name: 🏷️ Publicar Release no GitHub
+    needs: build-android
+    runs-on: ubuntu-latest
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == true) }}
+
+    steps:
+      - name: 📥 Baixar Artefato APK
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: cogito-android-release-apk
+          path: release-assets/
+
+      - name: 📥 Baixar Artefato Bundle
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: cogito-android-release-bundle
+          path: release-assets/
+
+      - name: 📥 Baixar Checksums
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: cogito-build-checksums
+          path: release-assets/
+
+      - name: 🚀 Criar GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false

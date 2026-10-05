@@ -1,0 +1,183 @@
+name: COGITO CI - Continuous Integration & Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'release/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # 1. QUALIDADE DE CÓDIGO E ANÁLISE ESTÁTICA
+  # ============================================================================
+  code-quality:
+    name: 🎨 Qualidade de Código & Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: 🐦 Setup do Flutter SDK (3.41.2)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.2'
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Instalar Dependências
+        run: flutter pub get
+
+      - name: 📐 Validação de Formatação (dart format)
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: 🔍 Análise Estática de Código (flutter analyze)
+        run: flutter analyze
+
+  # ============================================================================
+  # 2. AUDITORIA DE SEGURANÇA E VAZAMENTO DE CREDENCIAIS
+  # ============================================================================
+  security-audit:
+    name: 🛡️ Auditoria de Segurança & Segredos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout com Histórico Completo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔐 Varredura de Segredos e Chaves Vazadas (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: false
+
+  # ============================================================================
+  # 3. TESTES UNITÁRIOS E RELATÓRIO DE COBERTURA
+  # ============================================================================
+  unit-tests:
+    name: ⚡ Testes Unitários & Cobertura
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: 🐦 Setup do Flutter SDK (3.41.2)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.2'
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Instalar Dependências
+        run: flutter pub get
+
+      - name: "🧪 Executar Teste 1 - CONRADO (Salvaguarda Ética)"
+        run: flutter test test/test_1_conrado_etica_test.dart
+
+      - name: "🧪 Executar Teste 2 - CONRADO (Consultoria Trabalhista 13º Salário)"
+        run: flutter test test/test_2_conrado_trabalhista_test.dart
+
+      - name: "🧪 Executar Teste 3 - CONRADO (Restrição Temática Exclusiva)"
+        run: flutter test test/test_3_conrado_restricao_test.dart
+
+      - name: "🧪 Executar Teste 4 - Segurança de Perfil (Criptografia e Salt do Avatar)"
+        run: flutter test test/test_4_profile_security_test.dart
+
+      - name: "🧪 Executar Teste 5 - Acessibilidade & Tema (Controle Reativo)"
+        run: flutter test test/test_5_accessibility_theme_test.dart
+
+      - name: "🧪 Executar Teste 6 - Acessibilidade Visual (Matrizes de Daltonismo)"
+        run: flutter test test/test_6_daltonismo_matrix_test.dart
+
+      - name: "🧪 Executar Bateria Completa com Cobertura"
+        run: flutter test --coverage
+
+      - name: 📊 Publicar Relatório de Cobertura (LCOV)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: code-coverage-report
+          path: coverage/lcov.info
+          retention-days: 7
+
+  # ============================================================================
+  # 4. VALIDAÇÃO RÁPIDA DE COMPILAÇÃO ANDROID (BUILD CHECK)
+  # ============================================================================
+  build-check:
+    name: 🏗️ Validação de Build (Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 📥 Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup do Java JDK (17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: 🐦 Setup do Flutter SDK (3.41.2)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.2'
+          channel: 'stable'
+          cache: true
+
+      - name: 🐘 Cache Gradle & Dependências
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 📦 Instalar Dependências
+        run: flutter pub get
+
+      - name: 🔨 Compilar Build de Verificação (Debug APK)
+        run: flutter build apk --debug --android-skip-build-dependency-validation
+
+  # ============================================================================
+  # 5. QUALITY GATE CONSOLIDADO (STATUS CHECK PARA BRANCH PROTECTION)
+  # ============================================================================
+  quality-gate:
+    name: 🎯 Quality Gate
+    runs-on: ubuntu-latest
+    needs: [code-quality, security-audit, unit-tests, build-check]
+    if: always()
+
+    steps:
+      - name: 🚦 Avaliar Resultados das Etapas do CI
+        run: |
+          echo "=========================================="
+          echo "         COGITO - QUALITY GATE            "
+          echo "=========================================="
+          echo "Status Code Quality:  ${{ needs.code-quality.result }}"
+          echo "Status Security:      ${{ needs.security-audit.result }}"
+          echo "Status Unit Tests:    ${{ needs.unit-tests.result }}"
+          echo "Status Build Check:   ${{ needs.build-check.result }}"
+          echo "=========================================="
+          
+          if [ "${{ needs.code-quality.result }}" != "success" ] || \
+             [ "${{ needs.security-audit.result }}" != "success" ] || \
+             [ "${{ needs.unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.build-check.result }}" != "success" ]; then
+            echo "❌ FALHA NO QUALITY GATE: Uma ou mais verificações obrigatórias falharam."
+            exit 1
+          fi
+          
+          echo "✅ SUCESSO: Todas as verificações de qualidade, segurança e testes foram aprovadas!"
